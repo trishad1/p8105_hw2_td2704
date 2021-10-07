@@ -7,8 +7,95 @@ output: github_document
 ```{r, echo=FALSE, message=FALSE}
 
 library(tidyverse)
+library(readxl)
 
 ```
+
+## Problem 1
+
+Mr. Trash Wheel sheet.
+
+```{r}
+
+# order below
+## specify sheet, omit non-data entries
+## clean variable names to standardize
+## omit rows without dumpster-specific data (remove na's in dumpster column)
+## round number of sports balls to nearest integer
+
+trashwheel_df = 
+  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+                           sheet = "Mr. Trash Wheel",
+                           range = "A2:N408") %>%
+  janitor::clean_names() %>%
+  drop_na(dumpster) %>%
+  mutate(
+    sports_balls = round(sports_balls, digits = 0)
+  )
+
+trashwheel_df
+
+```
+
+Precipitation data for 2018 annd 2019.
+
+```{r}
+
+precip18_df = 
+  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+             sheet = "2018 Precipitation",
+             range = "A2:B14") %>%
+  janitor::clean_names() %>%
+  mutate(
+    year = rep(2018, times = 12)
+  ) %>%
+  relocate(year)
+
+precip18_df
+
+```
+
+```{r}
+
+precip19_df = 
+  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+             sheet = "2019 Precipitation",
+             range = "A2:B14") %>%
+  janitor::clean_names() %>%
+  mutate(
+    year = rep(2019, times = 12)
+  ) %>%
+  relocate(year)
+
+precip19_df
+
+```
+
+```{r}
+
+precip_combined_df = 
+  bind_rows(precip18_df,precip19_df) %>%
+  mutate(
+    month = month.name[month]
+  )
+
+precip_combined_df
+
+```
+
+The Mr. Trash Wheel dataset has `r nrow(trashwheel_df)` rows of 
+`r length(colnames(trashwheel_df))` variables: `r colnames(trashwheel_df)`.
+It tracks homes powered by various recycled/reused items over the years
+`r unique(pull(trashwheel_df,year))`. The median number of sports balls in a 
+dumpster in 2019 was `r median(pull(filter(trashwheel_df,year==2019),sports_balls),na.rm = TRUE)`.
+The resulting precipitation dataset has `r nrow(precip_combined_df)` rows of 
+`r length(colnames(precip_combined_df))` variables: `r colnames(precip_combined_df)`.
+Years included in this dataset are `r unique(pull(precip_combined_df,year))`,
+and the amount of precipitation is listed for each month, year pair.
+From this data, the total precipitation in 2018 was 
+`r sum(pull(filter(precip_combined_df,year==2018),total), na.rm = TRUE)`.
+
+
 
 
 
