@@ -96,8 +96,111 @@ From this data, the total precipitation in 2018 was
 `r sum(pull(filter(precip_combined_df,year==2018),total), na.rm = TRUE)`.
 
 
+## Problem 2
+
+## SHOULD BE 822 OBSERVATIONNS BELOW
+
+```{r}
+
+pols_month_df2 = 
+  read_csv("data/fivethirtyeight_datasets/pols-month.csv") %>%
+  janitor::clean_names() %>%
+  filter(
+    prez_gop == 2
+  )
+pols_month_df2
+
+```
+
+
+```{r}
+
+pols_month_df = 
+  read_csv("data/fivethirtyeight_datasets/pols-month.csv") %>%
+  janitor::clean_names() %>%
+  separate(mon, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>%
+  mutate(
+    month = month.name[month]
+  ) %>%
+  pivot_longer(
+    cols = starts_with("prez_"),
+    names_to="president",
+    names_prefix = "prez_",
+    values_to="president_boolean"
+  ) %>%
+  filter(president_boolean==1) %>%
+  select(-president_boolean, -day)
+
+pols_month_df
+```
+
+```{r}
+
+snp_df = 
+  read_csv("data/fivethirtyeight_datasets/snp.csv") %>%
+  janitor::clean_names() %>%
+  mutate(
+    date = as.Date(date, "%m/%d/%y")
+  ) %>%
+  separate(date, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>%
+  select(-day) %>%
+  arrange(year, month) %>%
+  mutate(
+    month = month.name[month]
+  )
+
+snp_df
+
+```
+
+
+```{r}
+
+unemployment_df = 
+  read_csv("data/fivethirtyeight_datasets/unemployment.csv") %>%
+  janitor::clean_names() %>%
+  pivot_longer(
+    jan:dec,
+    names_to="month",
+    values_to="perc_unemployment"
+  ) %>%
+  mutate(
+    year = as.integer(year),
+    month = month.name[(match(month, tolower(month.abb)))]
+  )
+
+unemployment_df
+
+```
+
+Merge snp into pols first. Then merge unemployment into result.
+
+```{r}
+
+joined_df = 
+  inner_join(pols_month_df, snp_df, by = c("year","month")) %>%
+  inner_join(unemployment_df, by = c("year","month"))
+
+joined_df
+
+```
+
+TO DO:
+Write a short paragraph about these datasets. Explain briefly what each dataset contained, and describe the resulting dataset (e.g. give the dimension, range of years, and names of key variables).
+
+
+## Problem 3
 
 
 
+```{r}
+
+babynames_df = 
+  read_csv("data/Popular_Baby_Names.csv") %>%
+  janitor::clean_names()
+
+
+filter(babynames_df,childs_first_name=="Olivia")
+```
 
 
