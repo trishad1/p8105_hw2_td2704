@@ -8,6 +8,8 @@ output: github_document
 
 library(tidyverse)
 library(readxl)
+library(lubridate)
+library(dplyr)
 
 ```
 
@@ -24,7 +26,7 @@ Mr. Trash Wheel sheet.
 ## round number of sports balls to nearest integer
 
 trashwheel_df = 
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx",
                            sheet = "Mr. Trash Wheel",
                            range = "A2:N408") %>%
   janitor::clean_names() %>%
@@ -42,7 +44,7 @@ Precipitation data for 2018 annd 2019.
 ```{r}
 
 precip18_df = 
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx",
              sheet = "2018 Precipitation",
              range = "A2:B14") %>%
   janitor::clean_names() %>%
@@ -58,7 +60,7 @@ precip18_df
 ```{r}
 
 precip19_df = 
-  read_excel("data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx",
              sheet = "2019 Precipitation",
              range = "A2:B14") %>%
   janitor::clean_names() %>%
@@ -98,7 +100,7 @@ From this data, the total precipitation in 2018 was
 
 ## Problem 2
 
-## SHOULD BE 822 OBSERVATIONNS BELOW
+Assume any nonzero values count as TRUE for president column
 
 ```{r}
 
@@ -128,26 +130,43 @@ pols_month_df =
     names_prefix = "prez_",
     values_to="president_boolean"
   ) %>%
-  filter(president_boolean==1) %>%
+  filter(president_boolean!=0) %>%
   select(-president_boolean, -day)
 
 pols_month_df
 ```
+
+
 
 ```{r}
 
 snp_df = 
   read_csv("data/fivethirtyeight_datasets/snp.csv") %>%
   janitor::clean_names() %>%
+  separate(date, into = c("month", "day", "year"), sep = "/", convert = TRUE) %>%
+  relocate(year,month) %>%
   mutate(
-    date = as.Date(date, "%m/%d/%y")
+    year = ifelse(year >= 1950 %% 100, 1900+year, 2000+year), # to get proper 4 digit year
   ) %>%
-  separate(date, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>%
   select(-day) %>%
-  arrange(year, month) %>%
+  arrange(year,month) %>%
   mutate(
     month = month.name[month]
   )
+
+
+# snp_df = 
+#   read_csv("data/fivethirtyeight_datasets/snp.csv") %>%
+#   janitor::clean_names() %>%
+#   mutate(
+#     date = as.Date(date, "%m/%d/%y")
+#   ) %>%
+#   separate(date, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>%
+#   select(-day) %>%
+#   arrange(year, month) %>%
+#   mutate(
+#     month = month.name[month]
+#   )
 
 snp_df
 
@@ -175,6 +194,8 @@ unemployment_df
 
 Merge snp into pols first. Then merge unemployment into result.
 
+Inner join:
+
 ```{r}
 
 joined_df = 
@@ -185,22 +206,88 @@ joined_df
 
 ```
 
-TO DO:
-Write a short paragraph about these datasets. Explain briefly what each dataset contained, and describe the resulting dataset (e.g. give the dimension, range of years, and names of key variables).
+
+The first dataset pols_month_df contains the number of national politicians who
+are Democratic or Republican at any given time, including president, governors,
+senators, etc - it has `r nrow(pols_month_df)` rows with variables `r colnames(pols_month_df)`.
+This dataset comes from the years `r min(pull(pols_month_df,year))` to `r max(pull(pols_month_df,year))`.
+The second dataset snp_df contains the S&P stock market index over year, month pairs
+- it has `r nrow(snp_df)` rows with variables `r colnames(snp_df)`.
+This dataset comes from the years `r min(pull(snp_df,year))` to `r max(pull(snp_df,year))`.
+The final dataset unemployment_df contains the unemployment percentage in the US
+over year, month pairs - it has `r nrow(unemployment_df)` rows with variables 
+`r colnames(unemployment_df)`. This dataset comes from the years 
+`r min(pull(unemployment_df,year))` to `r max(pull(unemployment_df,year))`. 
+The resulting dataset joined_df combines all this data into one dataframe of size 
+`r nrow(joined_df)` rows and `r ncol(joined_df)` columns with variables `r colnames(joined_df)`.
+It includes, by month,year pair, the number of Democratic and Republican 
+politicians across the US, as well as  the S&P stock index and unemployment rate
+at that time as well to provide pointers for the economy at that time. This
+joined dataset spans the years `r min(pull(joined_df,year))` to `r max(pull(joined_df,year))`.
+This joined dataset has only year,month pairs data that exists in all 3  of the
+individual datasets.
+
+If we use left join instead:
+
+Left join:
+
+```{r}
+
+joined_df_left = 
+  left_join(pols_month_df, snp_df, by = c("year","month")) %>%
+  left_join(unemployment_df, by = c("year","month"))
+
+joined_df_left
+
+```
+The first dataset pols_month_df contains the number of national politicians who
+are Democratic or Republican at any given time, including president, governors,
+senators, etc - it has `r nrow(pols_month_df)` rows with variables `r colnames(pols_month_df)`.
+This dataset comes from the years `r min(pull(pols_month_df,year))` to `r max(pull(pols_month_df,year))`.
+The second dataset snp_df contains the S&P stock market index over year, month pairs
+- it has `r nrow(snp_df)` rows with variables `r colnames(snp_df)`.
+This dataset comes from the years `r min(pull(snp_df,year))` to `r max(pull(snp_df,year))`.
+The final dataset unemployment_df contains the unemployment percentage in the US
+over year, month pairs - it has `r nrow(unemployment_df)` rows with variables 
+`r colnames(unemployment_df)`. This dataset comes from the years 
+`r min(pull(unemployment_df,year))` to `r max(pull(unemployment_df,year))`. 
+The resulting dataset left_joined_df combines all this data into one dataframe of size 
+`r nrow(joined_df_left)` rows and `r ncol(joined_df_left)` columns with variables `r colnames(joined_df_left)`.
+It includes, by month,year pair, the number of Democratic and Republican 
+politicians across the US, as well as  the S&P stock index and unemployment rate
+at that time as well to provide pointers for the economy at that time. This
+joined dataset spans the years `r min(pull(joined_df_left,year))` to `r max(pull(joined_df_left,year))`.
+This left joined dataset has all year,month pairs data that exist in pols_month_df,
+where some values for close and unemployment may be N/A if those year,month pairs
+didn't exist in the other datasets. Hence, this is a larger dataset than the
+inner joined dataframe but may be more incomplete.
 
 
 ## Problem 3
-
 
 
 ```{r}
 
 babynames_df = 
   read_csv("data/Popular_Baby_Names.csv") %>%
-  janitor::clean_names()
+  janitor::clean_names() %>%
+  distinct(.keep_all=TRUE) %>%
+  mutate(
+    ethnicity = replace(ethnicity, ethnicity == "WHITE NON HISP", "WHITE NON HISPANIC"),
+    ethnicity = replace(ethnicity, ethnicity == "ASIAN AND PACI", "ASIAN AND PACIFIC ISLANDER"),
+    ethnicity = replace(ethnicity, ethnicity == "BLACK NON HISP", "BLACK NON HISPANIC")
+  )
 
+unique(pull(babynames_df,ethnicity))
+```
+
+
+```{r}
 
 filter(babynames_df,childs_first_name=="Olivia")
+
 ```
+
+
 
 
